@@ -8,7 +8,7 @@
 import numpy as np
 import pandas as pd
 
-from ta.utils import IndicatorMixin
+from ta.utils import IndicatorMixin, sma #, linear_regression
 
 
 class RSIIndicator(IndicatorMixin):
@@ -295,6 +295,42 @@ class KAMAIndicator(IndicatorMixin):
         kama = pd.Series(self._kama, index=self._close.index)
         kama = self._check_fillna(kama, value=self._close)
         return pd.Series(kama, name='kama')
+
+
+class SMOIndicator(IndicatorMixin):
+    """Simple Momentum Oscillator (SMO)
+
+    Args:
+        high(pandas.Series): dataset 'High' column.
+        low(pandas.Series): dataset 'Low' column.
+        close(pandas.Series): dataset 'Close' column.
+        n(int): n period.
+        fillna(bool): if True, fill nan values.
+    """
+
+    def __init__(self, high: pd.Series, low: pd.Series, close: pd.Series, n: int = 13, fillna: bool = False):
+        self._high = high
+        self._low = low
+        self._close = close
+        self._n = n
+        self._fillna = fillna
+        self._run()
+
+    def _run(self):
+        # e1 = (highest(high, length) + lowest(low, length)) / 2 + sma(close, length)
+        self._e1 = (self._high.rolling(self._n).max() + self._low.rolling(self._n).min()) / 2 + self._close.rolling(self._n).mean()
+
+        # self._smo = linreg(close - e1 / 2, length, 0)
+        self._smo = sma(self._close - self._e1 / 2, 2)
+
+    def smo(self) -> pd.Series:
+        """Simple Momentum
+
+        Returns:
+            pandas.Series: New feature generated.
+        """
+        smo = self._check_fillna(self._smo)
+        return pd.Series(smo, name='smo')
 
 
 class ROCIndicator(IndicatorMixin):
